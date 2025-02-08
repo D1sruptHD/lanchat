@@ -3,40 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lanc Client</title>
+    <title>LancChat Client</title>
 </head>
 <body>
-    <h1>Lanc</h1>
+    <h1>LancChat - Chat Client</h1>
+    <p>Enter your username and room ID to connect:</p>
+    
+    <label for="username">Username:</label>
     <input type="text" id="username" placeholder="Enter your username">
-    <input type="text" id="messageInput" placeholder="Type a message...">
-    <button id="sendButton">Send</button>
+    <br>
 
-    <ul id="messagesList"></ul>
+    <label for="room-id">Room ID:</label>
+    <input type="text" id="room-id" placeholder="Enter room ID">
+    <br>
+
+    <button id="connect-btn">Connect</button>
+    
+    <h2>Chat</h2>
+    <div id="messages"></div>
+
+    <input type="text" id="message-input" placeholder="Type a message" disabled>
+    <button id="send-btn" disabled>Send</button>
 
     <script>
-        // Connect to the WebSocket server
-        const socket = new WebSocket('wss://lanchat-production.up.railway.app/'); // Replace with your WebSocket server URL
+        let socket;
+        const connectBtn = document.getElementById('connect-btn');
+        const sendBtn = document.getElementById('send-btn');
+        const messageInput = document.getElementById('message-input');
+        const messagesDiv = document.getElementById('messages');
         
-        socket.onopen = () => {
-            console.log('Connected to the WebSocket server');
-        };
+        connectBtn.addEventListener('click', () => {
+            const username = document.getElementById('username').value;
+            const roomId = document.getElementById('room-id').value;
 
-        socket.onmessage = (event) => {
-            const message = event.data;
-            const messagesList = document.getElementById('messagesList');
-            const li = document.createElement('li');
-            li.textContent = message;
-            messagesList.appendChild(li);
-        };
+            if (!username || !roomId) {
+                alert("Please provide both username and room ID.");
+                return;
+            }
 
-        document.getElementById('sendButton').addEventListener('click', () => {
-            const messageInput = document.getElementById('messageInput');
-            const usernameInput = document.getElementById('username');
-            const message = `${usernameInput.value}: ${messageInput.value}`;
+            // Create WebSocket connection to the Railway server
+            socket = new WebSocket('wss://lanchat-production.up.railway.app');
+            
+            socket.onopen = () => {
+                // Send initial data once connected
+                socket.send(JSON.stringify({ type: 'join', username, roomId }));
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                messagesDiv.innerHTML += `<p>Connected to room: ${roomId}</p>`;
+            };
+            
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'message') {
+                    messagesDiv.innerHTML += `<p><strong>${data.username}:</strong> ${data.message}</p>`;
+                } else if (data.type === 'join') {
+                    messagesDiv.innerHTML += `<p><em>${data.username} joined the room.</em></p>`;
+                }
+            };
 
-            socket.send(message);
+            socket.onclose = () => {
+                messagesDiv.innerHTML += "<p>Connection closed.</p>";
+            };
 
-            messageInput.value = '';
+            socket.onerror = (error) => {
+                console.error("WebSocket Error: ", error);
+            };
+        });
+
+        sendBtn.addEventListener('click', () => {
+            const message = messageInput.value;
+            if (message) {
+                socket.send(JSON.stringify({ type: 'message', message }));
+                messageInput.value = ''; // Clear input field
+            }
         });
     </script>
 </body>
