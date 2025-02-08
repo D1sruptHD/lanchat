@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lanc Client</title>
+</head>
+<body>
+    <h1>Lanc</h1>
+    <input type="text" id="username" placeholder="Enter your username">
+    <input type="text" id="messageInput" placeholder="Type a message...">
+    <button id="sendButton">Send</button>
+
+    <ul id="messagesList"></ul>
+
+    <script>
+        // Connect to the WebSocket server
+        const socket = new WebSocket('wss://your-server-url'); // Replace with your WebSocket server URL
+        
+        socket.onopen = () => {
+            console.log('Connected to the WebSocket server');
+        };
+
+        socket.onmessage = (event) => {
+            const message = event.data;
+            const messagesList = document.getElementById('messagesList');
+            const li = document.createElement('li');
+            li.textContent = message;
+            messagesList.appendChild(li);
+        };
+
+        document.getElementById('sendButton').addEventListener('click', () => {
+            const messageInput = document.getElementById('messageInput');
+            const usernameInput = document.getElementById('username');
+            const message = `${usernameInput.value}: ${messageInput.value}`;
+
+            socket.send(message);
+
+            messageInput.value = '';
+        });
+    </script>
+</body>
+</html>
